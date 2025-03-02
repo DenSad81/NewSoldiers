@@ -9,37 +9,62 @@ public class Program
     private static void Main(string[] args)
     {
         Random random = new Random();
-        CreaterData createSoldiers = new CreaterData();
-        List<Soldier> soldiers1 = createSoldiers.CreateSoldiers(random);
-        List<Soldier> soldiers2 = createSoldiers.CreateSoldiers(random);
+        CreaterSoldiers createSoldiers = new CreaterSoldiers();
+        FilterByFirstLetter filter = new FilterByFirstLetter("B");
+        List<Soldier> soldiers1 = createSoldiers.Create(random);
+        List<Soldier> soldiers2 = createSoldiers.Create(random);
 
-        ShowData(soldiers1);
-        ShowData(soldiers2);
-        GetNewData(ref soldiers1, ref soldiers2);
-        ShowData(soldiers1);
-        ShowData(soldiers2);
-    }
+        new Shower(soldiers1).ShowData();
+        new Shower(soldiers2).ShowData();
 
-    private static void ShowData(List<Soldier> soldiers)
-    {
-        foreach (var soldier in soldiers)
-       soldier.ShowData();
+        if (filter.TryGetDataByFilter(soldiers1, out IEnumerable<Soldier> filtredCollection) == false)
+        {
+            Console.WriteLine("Matches not found");
+            return;
+        }
 
-        Console.WriteLine();
-    }
-
-    private static void GetNewData(ref List<Soldier> soldiers1, ref List<Soldier> soldiers2)
-    {
-        IEnumerable<Soldier> filtredSoldiers = soldiers1.Where(sold => sold.Name.ToUpper().StartsWith("B"));
-        soldiers2 = soldiers2.Union(filtredSoldiers).ToList();
-        soldiers1 = soldiers1.Except(filtredSoldiers).ToList();
+        new Shower((soldiers1.Except(filtredCollection)).ToList()).ShowData();
+        new Shower((soldiers2.Union(filtredCollection)).ToList()).ShowData();
     }
 }
 
-public  class Soldier
+public interface IShowData
+{
+    void ShowData();
+}
+
+public class Shower : IShowData
+{
+    private IEnumerable<Object> _data;
+
+    public Shower(IEnumerable<object> data)
+    {
+        _data = data;
+    }
+
+    public void ShowData()
+    {
+        if (_data is List<Soldier>)
+        {
+            List<Soldier> soldiers = (List<Soldier>)_data;
+
+            foreach (var soldier in soldiers)
+                soldier.ShowData();
+
+            Console.WriteLine();
+        }
+        else
+        {
+            Console.WriteLine("Wrong data type");
+            return;
+        }
+    }
+}
+
+public class Soldier : IShowData
 {
     private static int s_ids = 0;
-    
+
     public Soldier(string name, string rank, string weapon, int lifeTime)
     {
         Name = name;
@@ -55,13 +80,33 @@ public  class Soldier
     public string Rank { get; private set; }
     public int LifeTime { get; private set; }
 
-    public void ShowData()=>
+    public void ShowData() =>
         Console.WriteLine($"ID: {Id} Name: {Name} Ranks: {Rank} Weapon: {Weapon} LifeTime: {LifeTime}");
 }
 
-public  class CreaterData
+public class FilterByFirstLetter
 {
-    public List<Soldier> CreateSoldiers(Random random)
+    private string _firstLetter;
+
+    public FilterByFirstLetter(string firstLetter = "A")
+    {
+        _firstLetter = firstLetter.ToUpper();
+    }
+
+    public bool TryGetDataByFilter(List<Soldier> rawCollection, out IEnumerable<Soldier> filtredCollection)
+    {
+        filtredCollection = rawCollection.Where(soldier => soldier.Name.ToUpper().StartsWith(_firstLetter));
+
+        if (filtredCollection != null)
+            return true;
+        else
+            return false;
+    }
+}
+
+public class CreaterSoldiers
+{
+    public List<Soldier> Create(Random random)
     {
         int minLifeTime = 0;
         int maxLifeTime = 24;
